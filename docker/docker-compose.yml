@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  backend:
+    image: herber177/node-backend-villegas:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      MY_DATABASE_DRIVER: ${MY_DATABASE_DRIVER:-mysql}
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_USER_NAME: ${DB_USER_NAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      DB_NAME: ${DB_NAME:-appdb}
+      DB_PORT: ${DB_PORT:-3306}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: appdb
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../ProyectoBackend/data/mysql_data.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-psecret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+
+networks:
+  app-network:
+    driver: bridge

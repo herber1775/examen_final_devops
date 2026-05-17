@@ -1,0 +1,66 @@
+name: Build, Push y Deploy a Digital Ocean
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Login a Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build y Push imagen backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: herber177/node-backend-villegas:latest
+
+      - name: Build y Push imagen backup
+        uses: docker/build-push-action@v5
+        with:
+          context: backup
+          file: backup/Dockerfile
+          push: true
+          tags: herber177/db-backup:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Copiar archivos al servidor via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 147.182.209.230
+          username: root
+          key: ${{ secrets.SSH_PRIVATE }}
+          source: "docker/,ProyectoBackend/"
+          target: /var/codigo/herber
+
+      - name: Deploy en servidor Digital Ocean via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 147.182.209.230
+          username: root
+          key: ${{ secrets.SSH_PRIVATE }}
+          script: |
+            cd /var/codigo/herber/docker
+            docker-compose down
+            docker-compose pull
+            docker-compose up -d
+            docker ps
