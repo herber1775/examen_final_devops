@@ -1,0 +1,7 @@
+docker/
+k8s/
+backup/
+.github/
+ProyectoBackend/
+*.md
+.git

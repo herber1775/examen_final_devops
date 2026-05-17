@@ -2,11 +2,11 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY ProyectoBackend/package*.json ./
+COPY package*.json ./
 
 RUN npm install --production
 
-COPY ProyectoBackend/ .
+COPY . .
 
 EXPOSE 3000
 
