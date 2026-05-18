@@ -1,0 +1,89 @@
+name: Modificar Driver de Base de Datos en K8s
+
+on:
+  workflow_dispatch:
+    inputs:
+      recurso:
+        description: 'Recurso a modificar'
+        required: true
+        default: 'k8s'
+        type: choice
+        options:
+          - k8s
+      driver:
+        description: 'Driver de base de datos'
+        required: true
+        default: 'mysql'
+        type: choice
+        options:
+          - mysql
+          - postgres
+          - mongo
+
+jobs:
+  cambiar-driver:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configurar kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Establecer variables según driver seleccionado
+        id: vars
+        run: |
+          DRIVER="${{ github.event.inputs.driver }}"
+
+          if [ "$DRIVER" = "mysql" ]; then
+            echo "db_host=mysql-service"     >> $GITHUB_OUTPUT
+            echo "db_port=3306"              >> $GITHUB_OUTPUT
+            echo "db_user=root"              >> $GITHUB_OUTPUT
+
+          elif [ "$DRIVER" = "postgres" ]; then
+            echo "db_host=postgres-service"  >> $GITHUB_OUTPUT
+            echo "db_port=5432"              >> $GITHUB_OUTPUT
+            echo "db_user=postgres"          >> $GITHUB_OUTPUT
+
+          elif [ "$DRIVER" = "mongo" ]; then
+            echo "db_host=mongo-service"     >> $GITHUB_OUTPUT
+            echo "db_port=27017"             >> $GITHUB_OUTPUT
+            echo "db_user=root"              >> $GITHUB_OUTPUT
+          fi
+
+      - name: Actualizar ConfigMap con el nuevo driver
+        run: |
+          kubectl patch configmap backend-config \
+            -n examen-devops \
+            --type merge \
+            -p '{
+              "data": {
+                "MY_DATABASE_DRIVER": "${{ github.event.inputs.driver }}",
+                "DB_HOST": "${{ steps.vars.outputs.db_host }}",
+                "DB_PORT": "${{ steps.vars.outputs.db_port }}",
+                "DB_USER_NAME": "${{ steps.vars.outputs.db_user }}"
+              }
+            }'
+
+      - name: Reiniciar deployment para aplicar cambios
+        run: |
+          kubectl rollout restart deployment/backend -n examen-devops
+
+      - name: Esperar que el deployment esté listo
+        run: |
+          kubectl rollout status deployment/backend -n examen-devops --timeout=120s
+
+      - name: Verificar configuración aplicada
+        run: |
+          echo "=== ConfigMap actualizado ==="
+          kubectl get configmap backend-config -n examen-devops -o yaml
+
+          echo "=== Estado del deployment ==="
+          kubectl get pods -n examen-devops
