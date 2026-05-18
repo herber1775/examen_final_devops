@@ -49,7 +49,7 @@ jobs:
           host: 147.182.209.230
           username: root
           key: ${{ secrets.SSH_PRIVATE }}
-          source: "docker/,ProyectoBackend/"
+          source: "docker/"
           target: /var/codigo/herber
 
       - name: Deploy en servidor Digital Ocean via SSH
