@@ -28,14 +28,30 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Configurar kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Configurar kubeconfig
+      - name: Configurar kubectl y minikube
         run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+          curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+          sudo install minikube-linux-amd64 /usr/local/bin/minikube
+          minikube start --driver=docker
+          minikube status
+
+      - name: Aplicar manifiestos K8s base
+        run: |
+          kubectl create namespace examen-devops --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create configmap backend-config \
+            --namespace=examen-devops \
+            --from-literal=MY_DATABASE_DRIVER=mysql \
+            --from-literal=DB_HOST=mysql-service \
+            --from-literal=DB_PORT=3306 \
+            --from-literal=DB_USER_NAME=root \
+            --from-literal=DB_NAME=appdb \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create deployment backend \
+            --image=herber177/node-backend-villegas:latest \
+            --namespace=examen-devops \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Establecer variables según driver seleccionado
         id: vars
