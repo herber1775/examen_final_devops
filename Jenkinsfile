@@ -39,18 +39,24 @@ pipeline {
         stage('Desplegar en servidor') {
             steps {
                 sh '''
-                    cd /codigo/villegas
-                    if [ -d "examen_final_devops" ]; then
-                        cd examen_final_devops && git pull origin jenkins
-                    else
-                        git clone -b jenkins https://github.com/herber1775/examen_final_devops.git
-                        cd examen_final_devops
-                    fi
-                    cd docker
-                    docker-compose down
-                    docker-compose pull
-                    docker-compose up -d
-                    docker ps
+                    docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        -v /codigo/villegas:/codigo/villegas \
+                        -w /codigo/villegas \
+                        docker:cli sh -c "
+                            if [ -d examen_final_devops ]; then
+                                cd examen_final_devops && git pull origin jenkins
+                            else
+                                apk add --no-cache git
+                                git clone -b jenkins https://github.com/herber1775/examen_final_devops.git
+                                cd examen_final_devops
+                            fi
+                            cd docker
+                            docker compose down
+                            docker compose pull
+                            docker compose up -d
+                            docker ps
+                        "
                 '''
             }
         }
