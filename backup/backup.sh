@@ -3,7 +3,7 @@ set -e
 
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
 BACKUP_FILE="backup_${TIMESTAMP}.sql"
-S3_PATH="s3://bucket-codigo-backup-herber/villegas/database/${TIMESTAMP}/"
+S3_PATH="s3://bucket-codigo-backup-herber/villegas/database-jenkins/${TIMESTAMP}/"
 
 echo "Iniciando backup - Driver: $MY_DATABASE_DRIVER - DB: $DB_NAME"
 
