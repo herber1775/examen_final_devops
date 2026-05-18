@@ -40,18 +40,6 @@ jobs:
     needs: build-and-push
 
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      - name: Copiar archivos al servidor via SCP
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: 147.182.209.230
-          username: root
-          key: ${{ secrets.SSH_PRIVATE }}
-          source: "docker/"
-          target: /var/codigo/herber
-
       - name: Deploy en servidor Digital Ocean via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -59,7 +47,14 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE }}
           script: |
-            cd /var/codigo/herber/docker
+            cd /var/codigo/herber
+            if [ -d "examen_final_devops" ]; then
+              cd examen_final_devops && git pull origin develop
+            else
+              git clone -b develop https://github.com/herber1775/examen_final_devops.git
+              cd examen_final_devops
+            fi
+            cd docker
             docker-compose down
             docker-compose pull
             docker-compose up -d
